@@ -1,0 +1,142 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id             String    @id @default(uuid())
+  phoneNumber    String    @unique
+  phoneHash      String    @unique
+  name           String
+  avatarUrl      String?
+  aboutStatus    String    @default("Available")
+  isOnline       Boolean   @default(false)
+  lastSeen       DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  // Relationships
+  contacts       Contact[] @relation("UserContacts")
+  targetContacts Contact[] @relation("TargetContacts")
+  
+  sentMessages   Message[] @relation("SentMessages")
+  
+  stories        Story[]
+  storyViews     StoryViewer[]
+  
+  conversations  ConversationParticipant[]
+
+  outgoingCalls  Call[]   @relation("OutgoingCalls")
+  incomingCalls  Call[]   @relation("IncomingCalls")
+  photos         UserPhoto[]
+}
+
+model Contact {
+  id               String   @id @default(uuid())
+  userId           String
+  targetUserId     String
+  isMutualContact  Boolean  @default(false)
+  updatedAt        DateTime @updatedAt
+
+  user             User     @relation("UserContacts", fields: [userId], references: [id])
+  targetUser       User     @relation("TargetContacts", fields: [targetUserId], references: [id])
+
+  @@unique([userId, targetUserId])
+}
+
+model Conversation {
+  id           String   @id @default(uuid())
+  isGroup      Boolean  @default(false)
+  groupName    String?
+  groupAvatar  String?
+  adminId      String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  participants ConversationParticipant[]
+  messages     Message[]
+}
+
+model ConversationParticipant {
+  id             String       @id @default(uuid())
+  conversationId String
+  userId         String
+  joinedAt       DateTime     @default(now())
+
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  user           User         @relation(fields: [userId], references: [id])
+
+  @@unique([conversationId, userId])
+}
+
+model Message {
+  id             String       @id @default(uuid())
+  conversationId String
+  senderId       String
+  content        String?
+  mediaUrl       String?
+  status         Int          @default(1) // 0: Sending (Client), 1: Sent, 2: Delivered, 3: Read
+  createdAt      DateTime     @default(now())
+  readAt         DateTime?
+
+  conversation   Conversation @relation(fields: [conversationId], references: [id])
+  sender         User         @relation("SentMessages", fields: [senderId], references: [id])
+  
+  // For individual read receipts in group chats, we might need a separate model, 
+  // but for MVP, we'll keep it simple or expand later.
+}
+
+model Story {
+  id          String   @id @default(uuid())
+  userId      String
+  mediaUrl    String
+  caption     String?
+  createdAt   DateTime @default(now())
+  expiresAt   DateTime // Managed by application logic or Redis
+
+  user        User     @relation(fields: [userId], references: [id])
+  viewers     StoryViewer[]
+}
+
+model StoryViewer {
+  id        String   @id @default(uuid())
+  storyId   String
+  userId    String
+  viewedAt  DateTime @default(now())
+
+  story     Story    @relation(fields: [storyId], references: [id])
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@unique([storyId, userId])
+}
+
+model Call {
+  id          String   @id @default(uuid())
+  callerId    String
+  receiverId  String
+  type        String   @default("audio") // "audio" | "video"
+  status      String   @default("completed") // "missed" | "completed" | "declined"
+  duration    Int      @default(0) // duration in seconds
+  createdAt   DateTime @default(now())
+
+  caller      User     @relation("OutgoingCalls", fields: [callerId], references: [id])
+  receiver    User     @relation("IncomingCalls", fields: [receiverId], references: [id])
+}
+
+model UserPhoto {
+  id        String   @id @default(uuid())
+  userId    String
+  url       String
+  caption   String?
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

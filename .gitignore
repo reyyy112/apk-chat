@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+backend/node_modules/
+
+# Environment Variables & Secrets
+.env
+*.env
+backend/.env
+!backend/.env.example
+
+# Large Binaries & Executables
+*.exe
+*.apk
+cloudflared.exe
+QuickChat.apk
+
+# Uploads & Local Data
+backend/uploads/
+uploads/
+
+# Flutter / Mobile Build Artifacts
+mobile/build/
+mobile/.dart_tool/
+mobile/.flutter-plugins-dependencies
+.dart_tool/
+build/
+
+# IDEs & System files
+.vscode/
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
